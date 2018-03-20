@@ -1,0 +1,15 @@
+---
+# https://github.com/gluster/gluster-kubernetes/blob/27ed3198b57d19ae3230e103a17fc3729e1315ed/deploy/gk-deploy
+
+- name: load required dm modules
+  become: yes
+  modprobe:
+    name: "{{ item }}"
+    state: present
+  with_items: "{{ k8s_heketi_gluster_required_modules }}"
+
+- name: load required dm modules on startup
+  become: yes
+  template:
+    src: glusterfs-dm.conf.j2
+    dest: /etc/modules-load.d/glusterfs-dm.conf

@@ -16,4 +16,13 @@ k8s_heketi_gluster_nodeselector:
 k8s_heketi_gluster_storage_device:
 
 # Gluster docker image
-k8s_heketi_gluster_image: "gluster/gluster-centos:gluster3u9_centos7"
+k8s_heketi_gluster_image: "gluster/gluster-centos:gluster3u12_centos7"
+
+# Run necessary root actions
+k8s_heketi_gluster_run_root_tasks: True
+
+# Require kernel modules for Glsuter Heketi
+k8s_heketi_gluster_required_modules:
+- dm_snapshot
+- dm_mirror
+- dm_thin_pool

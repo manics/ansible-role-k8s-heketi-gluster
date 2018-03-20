@@ -1,4 +1,7 @@
 ---
+- include: kernel-modules.yml
+  when: k8s_heketi_gluster_run_root_tasks
+
 - include: heketi-server.yml
 - include: gluster-daemonset.yml
 - include: storage-creation.yml
