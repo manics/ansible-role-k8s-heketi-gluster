@@ -45,9 +45,22 @@
   set_fact:
     heketi_endpoint: "{{ get_heketi_endpoint.stdout }}"
 
+- name: download heketi client
+  get_url:
+    url: https://github.com/heketi/heketi/releases/download/v6.0.0/heketi-v6.0.0.linux.amd64.tar.gz
+    checksum: "sha256:a5ea0613203d1f4d6be907219a4b9824c3ae4cb562ee564a504acd785de55962"
+    dest: "~/"
+
+- name: extract heketi client
+  unarchive:
+    src: "~/heketi-v6.0.0.linux.amd64.tar.gz"
+    dest: "~/"
+    remote_src: yes
+    extra_opts:
+
 - name: apply topology-file to heketi
   command: >
-    heketi-cli -s http://{{ heketi_endpoint }} topology load --json=$HOME/.kubernetes-yaml/heketi/topology.json
+    ~/heketi/heketi-cli -s http://{{ heketi_endpoint }} topology load --json=$HOME/.kubernetes-yaml/heketi/topology.json
 
 - name: set fact glusternode_count
   set_fact:
