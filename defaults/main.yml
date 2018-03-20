@@ -1,0 +1,19 @@
+# Defaults for k8s-heketi-gluster
+
+# If True make this the default storage class for dynamically provisioned volumes
+k8s_heketi_gluster_default_storageclass: False
+
+# If True nodes will be labelled and tainted NoSchedule
+k8s_heketi_gluster_force_dedicated: False
+
+# Kubernetes tolerations
+k8s_heketi_gluster_tolerations:
+
+# Kubernetes node-selector
+k8s_heketi_gluster_nodeselector:
+
+# The underlying raw storage device
+k8s_heketi_gluster_storage_device:
+
+# Gluster docker image
+k8s_heketi_gluster_image: "gluster/gluster-centos:gluster3u9_centos7"

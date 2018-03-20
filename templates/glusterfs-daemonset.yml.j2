@@ -16,6 +16,7 @@ spec:
       labels:
         glusterfs-node: daemonset
     spec:
+{% if k8s_heketi_gluster_force_dedicated %}
       tolerations:
       - key: "dedicated"
         operator: "Equal"
@@ -23,10 +24,18 @@ spec:
         effect: "NoSchedule"
       nodeSelector:
         storagenode: glusterfs
+{% else %}
+{%   if k8s_heketi_gluster_tolerations %}
+      tolerations: {{ k8s_heketi_gluster_tolerations | to_json }}
+{%   endif %}
+{%   if k8s_heketi_gluster_nodeselector %}
+      nodeSelector: {{ k8s_heketi_gluster_nodeselector | to_json }}
+{%   endif %}
+{% endif %}
       hostNetwork: true
       containers:
-      - image: gluster/gluster-centos:gluster3u9_centos7
-        imagePullPolicy: Always
+      - image: {{ k8s_heketi_gluster_image }}
+        imagePullPolicy: IfNotPresent
         name: glusterfs
         volumeMounts:
         - name: glusterfs-heketi

@@ -2,6 +2,7 @@
 - name: taint gluster nodes
   command: >
     kubectl taint node --overwrite=true -l storagenode=glusterfs dedicated=fileserver:NoSchedule
+  when: k8s_heketi_gluster_force_dedicated
 
 - name: create heketi yaml directory
   file:

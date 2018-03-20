@@ -16,7 +16,7 @@
                "zone": 1
              },
              "devices": [
-               "{{ extra_disk_device }}"
+               "{{ k8s_heketi_gluster_storage_device }}"
              ]
            }
            {% if not loop.last %}
