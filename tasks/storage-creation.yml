@@ -31,7 +31,7 @@
 
 - name: render topology
   template:
-    src: topology.json
+    src: topology.json.j2
     dest: "~/.kubernetes-yaml/heketi/topology.json"
 
 - name: retrieve heketi endpoint
@@ -64,7 +64,7 @@
 
 - name: render storage-class
   template:
-    src: storage-class.yml
+    src: storage-class.yml.j2
     dest: "~/.kubernetes-yaml/heketi/storage-class.yml"
 
 - name: create storage-class
