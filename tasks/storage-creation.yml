@@ -1,7 +1,8 @@
 ---
 - name: retrieve gluster-pod IPs
   command: >
-    kubectl get pods
+    {{ k8s_heketi_gluster_kubectl }}
+    get pods
     --namespace=storage-heketi
     -o jsonpath='{.items[?(@.spec.containers[*].name=="glusterfs")].status.podIP}'
   register: get_ips
@@ -12,7 +13,8 @@
 
 - name: retrieve gluster-server nodenames
   command: >
-    kubectl get pods
+    {{ k8s_heketi_gluster_kubectl }}
+    get pods
     --namespace=storage-heketi
     -o jsonpath='{.items[?(@.spec.containers[*].name=="glusterfs")].spec.nodeName}'
   register: get_nodenames
@@ -36,7 +38,8 @@
 
 - name: retrieve heketi endpoint
   command: >
-    kubectl get endpoints
+    {{ k8s_heketi_gluster_kubectl }}
+    get endpoints
     --namespace=storage-heketi
     -o jsonpath='{.items[?(@.metadata.name=="heketi")].subsets[*].addresses[*].ip}:{.items[?(@.metadata.name=="heketi")].subsets[*].ports[*].port}'
   register: get_heketi_endpoint
@@ -82,5 +85,6 @@
 
 - name: create storage-class
   command: >
-    kubectl apply -f
+    {{ k8s_heketi_gluster_kubectl }}
+    apply -f
     $HOME/.kubernetes-yaml/heketi/storage-class.yml

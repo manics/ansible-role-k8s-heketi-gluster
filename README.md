@@ -20,6 +20,7 @@ Optional variables:
 - `k8s_heketi_gluster_tolerations`: Kubernetes tolerations
 - `k8s_heketi_gluster_nodeselector`: Kubernetes node-selector
 - `k8s_heketi_gluster_image`: Gluster docker image
+- `k8s_heketi_gluster_kubectl`: The `kubectl` binary including the full path if necessary
 - `k8s_heketi_gluster_run_root_tasks`: The original source role could be run without root permissions, set this to `False` to retain this behaviour. In practice this will fail if kernel modules are unloaded so the defautls is `True`.
 
 

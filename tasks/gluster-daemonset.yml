@@ -12,12 +12,14 @@
 
 - name: create gluster DaemonSet
   command: >
-    kubectl apply -f
+    {{ k8s_heketi_gluster_kubectl }}
+    apply -f
     $HOME/.kubernetes-yaml/glusterfs/glusterfs-daemonset.yml
 
 - name: wait for gluster DaemonSet to be Running
   command: >
-    kubectl get pods
+    {{ k8s_heketi_gluster_kubectl }}
+    get pods
     --namespace=storage-heketi
     -o jsonpath='{.items[?(@.spec.containers[*].name=="glusterfs")].status.phase}'
   register: get_phase
@@ -28,7 +30,8 @@
 
 - name: wait for gluster DaemonSet to be Ready
   command: >
-    kubectl get pods
+    {{ k8s_heketi_gluster_kubectl }}
+    get pods
     --namespace=storage-heketi
     -o jsonpath='{.items[?(@.spec.containers[*].name=="glusterfs")].status.containerStatuses[*].ready}'
   register: get_is_ready
