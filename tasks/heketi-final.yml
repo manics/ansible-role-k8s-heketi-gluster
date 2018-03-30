@@ -1,0 +1,45 @@
+---
+# If a node becomes unreachable Ansible will continue, but for setting up
+# the storage cluster we need all nodes to be up
+# https://github.com/ansible/ansible/issues/18782#issuecomment-318457240
+- name: Check all hosts accessible
+  assert:
+    that:
+      - ansible_play_hosts == ansible_play_hosts_all
+
+- name: start heketi
+  command: >
+    {{ k8s_heketi_gluster_kubectl }}
+    apply -f
+    ~/kubernetes-yaml/heketi/{{ item }}
+  with_items:
+  - heketi-deployment.yml
+  run_once: true
+
+- name: wait for heketi to be Running
+  command: >
+    {{ k8s_heketi_gluster_kubectl }}
+    get pods
+    --namespace={{ k8s_heketi_gluster_namespace }}
+    --selector=name=heketi
+    -o jsonpath='{.items[*].status.phase}'
+  register: get_phase
+  until: get_phase.stdout == 'Running'
+  # Wait for 10 minutes
+  retries: 120
+  delay: 5
+  run_once: true
+
+- name: wait for heketi to be Ready
+  command: >
+    {{ k8s_heketi_gluster_kubectl }}
+    get pods
+    --namespace={{ k8s_heketi_gluster_namespace }}
+    --selector=name=heketi
+    -o jsonpath='{.items[*].status.containerStatuses[*].ready}'
+  register: get_is_ready
+  until: get_is_ready.stdout == 'true'
+  # Wait for 10 minutes
+  retries: 120
+  delay: 5
+  run_once: true

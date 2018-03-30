@@ -1,0 +1,93 @@
+# https://github.com/heketi/heketi/blob/v6.0.0/docs/admin/install-kubernetes.md
+---
+- name: create heketi yaml directory
+  file:
+    path: ~/kubernetes-yaml/heketi/
+    state: directory
+    mode: 0755
+    recurse: yes
+
+- name: copy heketi configuration
+  template:
+    src: "{{ item }}"
+    dest: "~/kubernetes-yaml/heketi/{{ item | basename }}"
+  with_items:
+  - heketi-role.yml
+  - heketi-bootstrap.yml
+  - heketi-deployment.yml
+
+- name: retrieve gluster-pod IPs
+  command: >
+    {{ k8s_heketi_gluster_kubectl }}
+    get pods
+    --namespace={{ k8s_heketi_gluster_namespace }}
+    -o jsonpath='{.items[?(@.spec.containers[*].name=="glusterfs")].status.podIP}'
+  register: get_ips
+
+- name: set fact endpoint_list
+  set_fact:
+    endpoint_list: "[\"{{get_ips.stdout | replace(' ','\",\"')}}\"]"
+
+- name: retrieve gluster-server nodenames
+  command: >
+    {{ k8s_heketi_gluster_kubectl }}
+    get pods
+    --namespace={{ k8s_heketi_gluster_namespace }}
+    -o jsonpath='{.items[?(@.spec.containers[*].name=="glusterfs")].spec.nodeName}'
+  register: get_nodenames
+
+- name: set fact host_list
+  set_fact:
+    host_list: "[\"{{get_nodenames.stdout | replace(' ','\",\"')}}\"]"
+
+- name: combine host-list with endpoint-list
+  set_fact:
+    combined_host_ip: "{{ combined_host_ip|default({})|combine({item.0: item.1}) }}"
+  with_together:
+    - "{{ host_list }}"
+    - "{{ endpoint_list }}"
+  register: combined_host_ip
+
+- name: render topology
+  template:
+    src: topology.json.j2
+    dest: "~/kubernetes-yaml/heketi/topology.json"
+
+- name: download heketi client
+  get_url:
+    url: https://github.com/heketi/heketi/releases/download/v5.0.1/heketi-client-v5.0.1.linux.amd64.tar.gz
+    checksum: "sha256:748ed1b3bac916747a53ba95639b582cf31952d320b01bbbab732f12271c3638"
+    dest: "~/"
+
+- name: extract heketi client
+  unarchive:
+    src: "~/heketi-client-v5.0.1.linux.amd64.tar.gz"
+    dest: "~/"
+    remote_src: yes
+    extra_opts:
+
+- name: check if heketi already bootstrapped
+  stat:
+    path: "~/kubernetes-yaml/heketi/heketi-storage.json"
+  register: _k8s_heketi_gluster_storage_exists
+
+- name: check if final heketi already deployed
+  command: >
+    {{ k8s_heketi_gluster_kubectl }}
+    --namespace={{ k8s_heketi_gluster_namespace }}
+    get deploy heketi
+  register: _k8s_heketi_gluster_exists
+  failed_when: _k8s_heketi_gluster_exists.rc not in [0, 1]
+  run_once: True
+
+# Consistency check: If final heketi already deployed but no
+# heketi-storage.json something has gone wrong, bail
+- name: Check heketi deployments and heketi-storage.json consistent
+  fail:
+    msg: Heketi already deployed but heketi-storage.json not found
+  when: _k8s_heketi_gluster_exists.rc == 0 and not _k8s_heketi_gluster_storage_exists.stat.exists
+
+# If deploy/heketi exists this means heketi has already been bootstrapped
+# so skip
+- include: heketi-bootstrap.yml
+  when: _k8s_heketi_gluster_exists.rc == 1

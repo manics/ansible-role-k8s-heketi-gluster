@@ -21,8 +21,8 @@ k8s_heketi_gluster_image: "gluster/gluster-centos:gluster3u12_centos7"
 # kubectl binary
 k8s_heketi_gluster_kubectl: kubectl
 
-# Run necessary root actions
-k8s_heketi_gluster_run_root_tasks: True
+# Namespace for all components
+k8s_heketi_gluster_namespace: storage-heketi
 
 
 ######################################################################

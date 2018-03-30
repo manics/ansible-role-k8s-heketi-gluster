@@ -1,73 +1,47 @@
 ---
+# If a node becomes unreachable Ansible will continue, but for setting up
+# the storage cluster we need all nodes to be up
+# https://github.com/ansible/ansible/issues/18782#issuecomment-318457240
+- name: Check all hosts accessible
+  assert:
+    that:
+      - ansible_play_hosts == ansible_play_hosts_all
+
 - name: retrieve gluster-pod IPs
   command: >
     {{ k8s_heketi_gluster_kubectl }}
     get pods
-    --namespace=storage-heketi
+    --namespace={{ k8s_heketi_gluster_namespace }}
     -o jsonpath='{.items[?(@.spec.containers[*].name=="glusterfs")].status.podIP}'
-  register: get_ips
+  register: _k8s_heketi_gluster_ips
+  run_once: true
 
-- name: set fact enpoint_list
-  set_fact:
-    enpoint_list: "[\"{{get_ips.stdout | replace(' ','\",\"')}}\"]"
-
-- name: retrieve gluster-server nodenames
+- name: retrieve heketi service
   command: >
     {{ k8s_heketi_gluster_kubectl }}
-    get pods
-    --namespace=storage-heketi
-    -o jsonpath='{.items[?(@.spec.containers[*].name=="glusterfs")].spec.nodeName}'
-  register: get_nodenames
+    get service
+    heketi
+    --namespace={{ k8s_heketi_gluster_namespace }}
+    -o
+    jsonpath='{.spec.clusterIP}:{.spec.ports[?(@.name=="heketi")].port}'
+  register: _k8s_heketi_gluster_endpoint
+  run_once: true
 
-- name: set fact host_list
-  set_fact:
-    host_list: "[\"{{get_nodenames.stdout | replace(' ','\",\"')}}\"]"
-
-- name: combine host-list with endpoint-list
-  set_fact:
-    combined_host_ip: "{{ combined_host_ip|default({})|combine({item.0: item.1}) }}"
-  with_together:
-    - "{{ host_list }}"
-    - "{{ enpoint_list }}"
-  register: combined_host_ip
-
-- name: render topology
-  template:
-    src: topology.json.j2
-    dest: "~/.kubernetes-yaml/heketi/topology.json"
-
-- name: retrieve heketi endpoint
-  command: >
-    {{ k8s_heketi_gluster_kubectl }}
-    get endpoints
-    --namespace=storage-heketi
-    -o jsonpath='{.items[?(@.metadata.name=="heketi")].subsets[*].addresses[*].ip}:{.items[?(@.metadata.name=="heketi")].subsets[*].ports[*].port}'
-  register: get_heketi_endpoint
+- name: assert heketi service obtained
+  assert:
+    msg: Failed to obtain heketi service IP and port
+    that: "_k8s_heketi_gluster_endpoint.stdout | length > 3"
+  run_once: true
 
 - name: set fact get_heketi_endpoint
   set_fact:
-    heketi_endpoint: "{{ get_heketi_endpoint.stdout }}"
-
-- name: download heketi client
-  get_url:
-    url: https://github.com/heketi/heketi/releases/download/v6.0.0/heketi-v6.0.0.linux.amd64.tar.gz
-    checksum: "sha256:a5ea0613203d1f4d6be907219a4b9824c3ae4cb562ee564a504acd785de55962"
-    dest: "~/"
-
-- name: extract heketi client
-  unarchive:
-    src: "~/heketi-v6.0.0.linux.amd64.tar.gz"
-    dest: "~/"
-    remote_src: yes
-    extra_opts:
-
-- name: apply topology-file to heketi
-  command: >
-    ~/heketi/heketi-cli -s http://{{ heketi_endpoint }} topology load --json=$HOME/.kubernetes-yaml/heketi/topology.json
+    heketi_endpoint: "{{ _k8s_heketi_gluster_endpoint.stdout }}"
+  run_once: true
 
 - name: set fact glusternode_count
   set_fact:
-    glusterpod_count: "{{ (enpoint_list | length) | int }}"
+    glusterpod_count: "{{ (_k8s_heketi_gluster_ips | length) | int }}"
+  run_once: true
 
 # volumtype (replication factor): <VolumeDurability>:number eg. none:1, replicate:2, replicate:3 , disperse:???
 # in jinja2 - means remove any whitespace before this bracket
@@ -77,14 +51,16 @@
                  {%- elif (glusterpod_count | int) == 2 %}replicate:2
                  {%- else %}replicate:3{% endif %}"
   when: volumetype is undefined
+  run_once: true
 
 - name: render storage-class
   template:
     src: storage-class.yml.j2
-    dest: "~/.kubernetes-yaml/heketi/storage-class.yml"
+    dest: "~/kubernetes-yaml/heketi/storage-class.yml"
 
 - name: create storage-class
   command: >
     {{ k8s_heketi_gluster_kubectl }}
     apply -f
-    $HOME/.kubernetes-yaml/heketi/storage-class.yml
+    ~/kubernetes-yaml/heketi/storage-class.yml
+  run_once: true

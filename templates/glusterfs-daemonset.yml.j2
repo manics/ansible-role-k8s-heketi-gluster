@@ -3,7 +3,7 @@ kind: DaemonSet
 apiVersion: extensions/v1beta1
 metadata:
   name: glusterfs
-  namespace: storage-heketi
+  namespace: {{ k8s_heketi_gluster_namespace }}
   labels:
     glusterfs: deployment
   annotations:
